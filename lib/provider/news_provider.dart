@@ -1,3 +1,4 @@
+//news_provider.dart
 import 'package:flutter/material.dart';
 import '../models/news_article.dart';
 import '../services/news_api.dart';

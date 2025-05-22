@@ -1,3 +1,4 @@
+//article_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,12 +15,42 @@ class ArticleDetailScreen extends StatelessWidget {
 
     // Function to launch URL externally
     void _launchURL() async {
-      final Uri url = Uri.parse(article.url);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
+      final urlString = article.url.trim();
+      if (urlString.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch the article URL')),
+          const SnackBar(content: Text('Article URL is empty.')),
+        );
+        return;
+      }
+
+      Uri? url;
+      try {
+        url = Uri.parse(urlString.startsWith('http') ? urlString : 'https://$urlString');
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid URL format.')),
+        );
+        return;
+      }
+
+      print('Attempting to launch: $url');
+
+      final canLaunch = await canLaunchUrl(url);
+      if (!canLaunch) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch the article URL')),
+        );
+        return;
+      }
+
+      final success = await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to open the article.')),
         );
       }
     }

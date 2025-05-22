@@ -32,17 +32,14 @@ class NewsArticle {
 
     final difference = nowUtc.difference(publishedUtc);
 
-    print('Trending check - Now UTC: $nowUtc, Published UTC: $publishedUtc, Diff hrs: ${difference.inHours}');
-
     return difference.inHours <= 30;
   }
 
   static bool isLongArticle(String content) {
-    print('lenght  = ${content.length}');
     return content.length > 500; // Define your own threshold here
   }
 
-  // Factory to parse JSON and create a NewsArticle instance
+  // Old factory for old API JSON
   factory NewsArticle.fromJson(Map<String, dynamic> json, String category) {
     final rawContent = json['content'] ?? json['description'] ?? '';
     final content = _cleanContent(rawContent);
@@ -63,6 +60,33 @@ class NewsArticle {
       isLong: isLongArticle(content),
       isTrending: isTrendingArticle(publishedAt),
       imageUrl: json['urlToImage'],
+      date: date,
+      time: time,
+      url: json['url'] ?? '',
+    );
+  }
+
+  // New factory for TheNewsAPI.com JSON response format
+  factory NewsArticle.fromNewsApiJson(Map<String, dynamic> json, String category) {
+    final rawContent = json['description'] ?? '';
+    final content = _cleanContent(rawContent);
+
+    final publishedAt = json['published_at'] ?? '';
+    final dateTime = DateTime.tryParse(publishedAt);
+    final date = dateTime != null
+        ? '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}'
+        : null;
+    final time = dateTime != null
+        ? '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}'
+        : null;
+
+    return NewsArticle(
+      title: json['title'] ?? '',
+      content: content,
+      category: category,
+      isLong: isLongArticle(content),
+      isTrending: isTrendingArticle(publishedAt),
+      imageUrl: json['image_url'],
       date: date,
       time: time,
       url: json['url'] ?? '',
