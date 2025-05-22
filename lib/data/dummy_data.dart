@@ -10,6 +10,7 @@ final List<NewsArticle> dummyArticles = [
     imageUrl: "https://picsum.photos/600/300?random=1",
     date: "2025-05-21",
     time: "09:30 AM",
+    url: '',
   ),
   NewsArticle(
     title: "Global Markets Rally",
@@ -20,6 +21,7 @@ final List<NewsArticle> dummyArticles = [
     imageUrl: "https://picsum.photos/600/300?random=2",
     date: "2025-05-20",
     time: "04:15 PM",
+    url: '',
   ),
   NewsArticle(
     title: "Mars Mission Announced",
@@ -30,6 +32,7 @@ final List<NewsArticle> dummyArticles = [
     imageUrl: "https://picsum.photos/600/300?random=3",
     date: "2025-05-19",
     time: "11:00 AM",
+    url: '',
   ),
   NewsArticle(
     title: "Olympics 2024 Preview",
@@ -40,5 +43,6 @@ final List<NewsArticle> dummyArticles = [
     imageUrl: "https://picsum.photos/600/300?random=4",
     date: "2025-05-18",
     time: "07:45 PM",
+    url: '',
   ),
 ];
