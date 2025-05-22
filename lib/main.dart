@@ -7,6 +7,7 @@ import './screens/settings_screen.dart';
 import './screens/article_detail_screen.dart';
 import './provider/bookmark_provider.dart';
 import './provider/settings_provider.dart';
+import './provider/news_provider.dart';
 
 void main() {
   runApp(
@@ -14,6 +15,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => NewsProvider()),
       ],
       child: const MyApp(),
     ),
@@ -25,11 +27,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Listen to SettingsProvider for theme changes
+    final settings = Provider.of<SettingsProvider>(context);
+
     return MaterialApp(
       title: 'News Reader',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light, // <-- use provider value here
       initialRoute: '/',
       routes: {
         '/': (context) => HomeScreen(),

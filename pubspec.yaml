@@ -30,6 +30,9 @@ environment:
 dependencies:
   http: ^1.2.1
   provider: ^6.1.1
+  intl: ^0.20.2
+  webview_flutter: ^4.0.6
+  url_launcher: ^6.1.10
   flutter:
     sdk: flutter
 
