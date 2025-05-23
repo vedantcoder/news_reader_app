@@ -12,15 +12,21 @@ import './provider/news_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Instantiate providers manually
+  final settingsProvider = SettingsProvider();
+  final newsProvider = NewsProvider();
   final bookmarkProvider = BookmarkProvider();
-  await bookmarkProvider.loadBookmarks(); // Load saved bookmarks
+
+  // Load articles before bookmarks (important for correct matching)
+  await newsProvider.fetchArticles();
+  bookmarkProvider.setAvailableArticles(newsProvider.allArticles);
 
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => settingsProvider),
+        ChangeNotifierProvider(create: (_) => newsProvider),
         ChangeNotifierProvider(create: (_) => bookmarkProvider),
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
-        ChangeNotifierProvider(create: (_) => NewsProvider()),
       ],
       child: const MyApp(),
     ),

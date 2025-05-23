@@ -1,3 +1,4 @@
+//bookmark_provider.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,7 +12,7 @@ class BookmarkProvider with ChangeNotifier {
 
   void setAvailableArticles(List<NewsArticle> allArticles) {
     _allArticles = allArticles;
-    loadBookmarks();
+    loadBookmarks(); // Load after all articles are available
   }
 
   Future<void> toggleBookmark(NewsArticle article) async {
@@ -33,20 +34,26 @@ class BookmarkProvider with ChangeNotifier {
 
   Future<void> _saveBookmarksToPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonList = _bookmarkedArticles.map((a) => a.toJson()).toList();
-    await prefs.setString('bookmarks', jsonEncode(jsonList));
+    final List<String> encodedArticles = _bookmarkedArticles
+        .map((article) => jsonEncode(article.toJson()))
+        .toList();
+    await prefs.setStringList('bookmarks', encodedArticles);
   }
 
   Future<void> loadBookmarks() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString('bookmarks');
-    if (jsonString == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String>? encodedArticles = prefs.getStringList('bookmarks');
 
-    final List<dynamic> jsonList = jsonDecode(jsonString);
-    _bookmarkedArticles = jsonList
-        .map((jsonItem) =>
-        NewsArticle.fromMap(jsonItem as Map<String, dynamic>))
-        .toList();
+      if (encodedArticles != null) {
+        _bookmarkedArticles = encodedArticles
+            .map((articleStr) => NewsArticle.fromMap(jsonDecode(articleStr)))
+            .toList();
+      }
+    } catch (e) {
+      print('Error loading bookmarks: $e');
+      _bookmarkedArticles = []; // fallback
+    }
 
     notifyListeners();
   }
