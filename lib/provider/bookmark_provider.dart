@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/news_article.dart';
@@ -6,12 +7,11 @@ class BookmarkProvider with ChangeNotifier {
   List<NewsArticle> _bookmarkedArticles = [];
   List<NewsArticle> get bookmarkedArticles => _bookmarkedArticles;
 
-  // Reference list to compare URLs when reloading bookmarks
   List<NewsArticle> _allArticles = [];
 
   void setAvailableArticles(List<NewsArticle> allArticles) {
     _allArticles = allArticles;
-    _loadBookmarksFromPrefs();
+    loadBookmarks();
   }
 
   Future<void> toggleBookmark(NewsArticle article) async {
@@ -33,16 +33,19 @@ class BookmarkProvider with ChangeNotifier {
 
   Future<void> _saveBookmarksToPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    final urls = _bookmarkedArticles.map((a) => a.url).toList();
-    await prefs.setStringList('bookmarks', urls);
+    final jsonList = _bookmarkedArticles.map((a) => a.toJson()).toList();
+    await prefs.setString('bookmarks', jsonEncode(jsonList));
   }
 
-  Future<void> _loadBookmarksFromPrefs() async {
+  Future<void> loadBookmarks() async {
     final prefs = await SharedPreferences.getInstance();
-    final urls = prefs.getStringList('bookmarks') ?? [];
+    final jsonString = prefs.getString('bookmarks');
+    if (jsonString == null) return;
 
-    _bookmarkedArticles = _allArticles
-        .where((article) => urls.contains(article.url))
+    final List<dynamic> jsonList = jsonDecode(jsonString);
+    _bookmarkedArticles = jsonList
+        .map((jsonItem) =>
+        NewsArticle.fromMap(jsonItem as Map<String, dynamic>))
         .toList();
 
     notifyListeners();

@@ -1,4 +1,3 @@
-//news_article.dart
 class NewsArticle {
   final String title;
   final String content;
@@ -24,27 +23,18 @@ class NewsArticle {
 
   static bool isTrendingArticle(String publishedAt) {
     if (publishedAt.isEmpty) return false;
-
     final dateTime = DateTime.tryParse(publishedAt);
     if (dateTime == null) return false;
-
-    final nowUtc = DateTime.now().toUtc();
-    final publishedUtc = dateTime.toUtc();
-
-    final difference = nowUtc.difference(publishedUtc);
-
-    return difference.inHours <= 30;
+    return DateTime.now().toUtc().difference(dateTime.toUtc()).inHours <= 30;
   }
 
   static bool isLongArticle(String content) {
-    return content.length > 500; // Define your own threshold here
+    return content.length > 500;
   }
 
-  // Old factory for old API JSON
   factory NewsArticle.fromJson(Map<String, dynamic> json, String category) {
     final rawContent = json['content'] ?? json['description'] ?? '';
     final content = _cleanContent(rawContent);
-
     final publishedAt = json['publishedAt'] ?? '';
     final dateTime = DateTime.tryParse(publishedAt);
     final date = dateTime != null
@@ -67,11 +57,9 @@ class NewsArticle {
     );
   }
 
-  // New factory for TheNewsAPI.com JSON response format
   factory NewsArticle.fromNewsApiJson(Map<String, dynamic> json, String category) {
     final rawContent = json['description'] ?? '';
     final content = _cleanContent(rawContent);
-
     final publishedAt = json['published_at'] ?? '';
     final dateTime = DateTime.tryParse(publishedAt);
     final date = dateTime != null
@@ -94,9 +82,32 @@ class NewsArticle {
     );
   }
 
-  // Remove trailing [+xyz chars] from content
   static String _cleanContent(String content) {
     final regex = RegExp(r'\[\+\d+\schars\]$');
     return content.replaceAll(regex, '').trim();
   }
+
+  Map<String, dynamic> toJson() => {
+    'title': title,
+    'content': content,
+    'category': category,
+    'isLong': isLong,
+    'isTrending': isTrending,
+    'imageUrl': imageUrl,
+    'date': date,
+    'time': time,
+    'url': url,
+  };
+
+  factory NewsArticle.fromMap(Map<String, dynamic> map) => NewsArticle(
+    title: map['title'],
+    content: map['content'],
+    category: map['category'],
+    isLong: map['isLong'],
+    isTrending: map['isTrending'],
+    imageUrl: map['imageUrl'],
+    date: map['date'],
+    time: map['time'],
+    url: map['url'],
+  );
 }

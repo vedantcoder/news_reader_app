@@ -1,4 +1,3 @@
-//main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import './screens/home_screen.dart';
@@ -10,11 +9,16 @@ import './provider/bookmark_provider.dart';
 import './provider/settings_provider.dart';
 import './provider/news_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final bookmarkProvider = BookmarkProvider();
+  await bookmarkProvider.loadBookmarks(); // Load saved bookmarks
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => BookmarkProvider()),
+        ChangeNotifierProvider(create: (_) => bookmarkProvider),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => NewsProvider()),
       ],
@@ -28,7 +32,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to SettingsProvider for theme changes
     final settings = Provider.of<SettingsProvider>(context);
 
     return MaterialApp(
@@ -36,7 +39,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light, // <-- use provider value here
+      themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       initialRoute: '/',
       routes: {
         '/': (context) => HomeScreen(),

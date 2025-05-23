@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/news_article.dart';
 import '../widgets/article_card.dart';
 import '../provider/settings_provider.dart';
-import '../provider/news_provider.dart';
+import '../services/news_api.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -13,13 +13,29 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String? selectedCategory;
+  List<NewsArticle> allArticles = [];
+  bool isLoading = true;
+  bool hasError = false;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      Provider.of<NewsProvider>(context, listen: false).loadArticles(context);
-    });
+    fetchArticles();
+  }
+
+  Future<void> fetchArticles() async {
+    try {
+      final fetchedArticles = await NewsService.fetchAllCategoriesNews();
+      setState(() {
+        allArticles = fetchedArticles;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        isLoading = false;
+      });
+    }
   }
 
   List<NewsArticle> applyGlobalFilters(List<NewsArticle> articles, SettingsProvider settings) {
@@ -33,15 +49,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final settingsProvider = Provider.of<SettingsProvider>(context);
-    final newsProvider = Provider.of<NewsProvider>(context);
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final filteredArticles = applyGlobalFilters(newsProvider.articles, settingsProvider);
+    final filteredArticles = applyGlobalFilters(allArticles, settingsProvider);
     final displayedArticles = selectedCategory == null
         ? filteredArticles.take(8).toList()
         : filteredArticles.where((a) => a.category == selectedCategory).toList();
 
-    final categories = newsProvider.articles.map((a) => a.category).toSet().toList();
+    final categories = allArticles.map((a) => a.category).toSet().toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -57,8 +72,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: newsProvider.isLoading
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
+          : hasError
+          ? const Center(child: Text("Failed to load news"))
           : Padding(
         padding: EdgeInsets.symmetric(horizontal: screenWidth < 600 ? 16.0 : 32.0, vertical: 20.0),
         child: Column(
