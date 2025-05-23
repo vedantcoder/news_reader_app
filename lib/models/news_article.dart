@@ -1,3 +1,4 @@
+//news_article.dart
 class NewsArticle {
   final String title;
   final String content;
