@@ -19,7 +19,23 @@ class ArticleCard extends StatelessWidget {
         elevation: 4,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: isDesktop ? _buildDesktopLayout(context) : _buildMobileLayout(context),
+        child: Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            isDesktop ? _buildDesktopLayout(context) : _buildMobileLayout(context),
+            Positioned(
+              bottom: 12,
+              right: 12,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: _buildBookmarkIcon(context),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -28,23 +44,24 @@ class ArticleCard extends StatelessWidget {
     return Row(
       children: [
         if (article.imageUrl != null)
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-                child: Image.network(
-                  article.imageUrl!,
+          ClipRRect(
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+            child: Image.network(
+              article.imageUrl!,
+              width: 160,
+              height: 160,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
                   width: 160,
                   height: 160,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: _buildBookmarkIcon(context),
-              ),
-            ],
+                  color: Colors.grey[300],
+                  child: const Center(child: CircularProgressIndicator()),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
+            ),
           ),
         Expanded(
           child: Padding(
@@ -61,23 +78,23 @@ class ArticleCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (article.imageUrl != null)
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: Image.network(
-                  article.imageUrl!,
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Image.network(
+              article.imageUrl!,
+              height: 180,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
                   height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: _buildBookmarkIcon(context),
-              ),
-            ],
+                  color: Colors.grey[300],
+                  child: const Center(child: CircularProgressIndicator()),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
+            ),
           ),
         Padding(
           padding: const EdgeInsets.all(16.0),
@@ -91,6 +108,8 @@ class ArticleCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildTags(),
+        const SizedBox(height: 6),
         Text(
           article.title,
           style: Theme.of(context).textTheme.titleLarge,
@@ -113,24 +132,59 @@ class ArticleCard extends StatelessWidget {
     );
   }
 
-  Widget _buildBookmarkIcon(BuildContext context) {
-    final provider = Provider.of<BookmarkProvider>(context);
-    final isBookmarked = provider.isBookmarked(article);
+  Widget _buildTags() {
+    List<Widget> tags = [];
 
-    return GestureDetector(
-      onTap: () => provider.toggleBookmark(article),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.5),
-          shape: BoxShape.circle,
-        ),
-        padding: const EdgeInsets.all(6),
-        child: Icon(
-          isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+    if (article.isTrending) {
+      tags.add(_buildTag('Trending', Colors.redAccent));
+    }
+    if (article.isLong == false) {
+      tags.add(_buildTag('Short', Colors.blueAccent));
+    }
+
+    if (tags.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      children: tags
+          .map((tag) => Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: tag,
+      ))
+          .toList(),
+    );
+  }
+
+  Widget _buildTag(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.85),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
           color: Colors.white,
-          size: 20,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
         ),
       ),
+    );
+  }
+
+  Widget _buildBookmarkIcon(BuildContext context) {
+    final bookmarkProvider = Provider.of<BookmarkProvider>(context);
+    final isBookmarked = bookmarkProvider.isBookmarked(article);
+
+    return IconButton(
+      icon: Icon(
+        isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+        color: isBookmarked ? Colors.amber[700] : Colors.grey[700],
+      ),
+      onPressed: () {
+        bookmarkProvider.toggleBookmark(article);
+      },
+      tooltip: isBookmarked ? 'Remove Bookmark' : 'Add Bookmark',
     );
   }
 }

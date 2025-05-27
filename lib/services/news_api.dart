@@ -1,10 +1,11 @@
+//news_api.dart (service)
 import 'dart:convert';
 import 'dart:async'; // Required for Future.delayed
 import 'package:http/http.dart' as http;
 import '../models/news_article.dart';
 
 class NewsService {
-  static const _apiKey = 'eDnvDl76jbetr5acx3uMCHf4ZatwrxLEggp9Hbzv';
+  static const _apiKey = '4FSzvt8t6eNSxZBQNugzmjixXZIjTqXWFQG1H8b5';
   static const _baseUrl = 'https://api.thenewsapi.com/v1/news/all';
 
   static final List<String> allCategories = [
@@ -17,7 +18,7 @@ class NewsService {
     'technology',
   ];
 
-  static Future<List<NewsArticle>> fetchAllCategoriesNews({bool testMode = true}) async {
+  static Future<List<NewsArticle>> fetchAllCategoriesNews({bool testMode = false}) async {
     final List<NewsArticle> allArticles = [];
 
     // If testMode is true, fetch only the 'general' category, else fetch all categories

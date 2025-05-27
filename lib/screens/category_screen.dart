@@ -5,7 +5,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import '../models/news_article.dart';
 import '../widgets/article_card.dart';
 import '../provider/settings_provider.dart';
-import '../services/news_api.dart';
+import '../provider/news_provider.dart';
 
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({super.key});
@@ -16,9 +16,6 @@ class CategoryScreen extends StatefulWidget {
 
 class _CategoryScreenState extends State<CategoryScreen> {
   String? selectedCategory;
-  List<NewsArticle> allArticles = [];
-  bool isLoading = true;
-  String? errorMessage;
 
   @override
   void didChangeDependencies() {
@@ -29,171 +26,166 @@ class _CategoryScreenState extends State<CategoryScreen> {
       selectedCategory = args;
     }
 
-    if (isLoading) {
-      fetchArticles();
+    final newsProvider = Provider.of<NewsProvider>(context, listen: false);
+    if (newsProvider.articles.isEmpty && !newsProvider.isLoading) {
+      newsProvider.fetchArticles();
     }
   }
 
-  Future<void> fetchArticles() async {
-    try {
-      final articles = await NewsService.fetchAllCategoriesNews();
-      setState(() {
-        allArticles = articles;
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Failed to load news: $e';
-        isLoading = false;
-      });
-    }
+  List<NewsArticle> applyGlobalFilters(List<NewsArticle> articles, SettingsProvider settings, String? category) {
+    return articles.where((article) {
+      if (category != null && article.category != category) return false;
+      if (settings.showShortOnly && article.isLong) return false;
+      if (settings.showTrendingOnly && !article.isTrending) return false;
+      return true;
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
+    final newsProvider = Provider.of<NewsProvider>(context);
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Extract unique categories from the fetched articles
-    final categories = allArticles
-        .map((article) => article.category)
-        .toSet()
-        .toList();
+    if (newsProvider.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    // Filter articles based on selected category and filters
-    final filteredArticles = allArticles.where((article) {
-      if (selectedCategory == null) return false;
-      if (article.category != selectedCategory) return false;
-      if (settings.showShortOnly && article.isLong) return false;
-      if (settings.showTrendingOnly && !article.isTrending) return false;
-      return true;
-    }).toList();
+    if (newsProvider.error != null) {
+      return Scaffold(
+        body: Center(child: Text('Failed to load news: ${newsProvider.error}')),
+      );
+    }
+
+    final categories = newsProvider.articles.map((a) => a.category).toSet().toList();
+
+    // If no category selected, show message asking to select a category
+    if (selectedCategory == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Categories'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pushNamed(context, '/'), child: const Text('Home')),
+            TextButton(onPressed: () => Navigator.pushNamed(context, '/category'), child: const Text('Categories')),
+            TextButton(onPressed: () => Navigator.pushNamed(context, '/bookmarks'), child: const Text('Bookmarks')),
+            TextButton(onPressed: () => Navigator.pushNamed(context, '/settings'), child: const Text('Settings')),
+          ],
+        ),
+        body: Padding(
+          padding: EdgeInsets.symmetric(horizontal: screenWidth < 600 ? 16.0 : 32.0, vertical: 20.0),
+          child: Column(
+            children: [
+              CarouselSlider(
+                options: CarouselOptions(height: 50, viewportFraction: 0.4, autoPlay: true),
+                items: categories.map((category) {
+                  return GestureDetector(
+                    onTap: () => setState(() {
+                      selectedCategory = category;
+                    }),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Center(
+                        child: Text(category,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            )),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 40),
+              const Center(
+                child: Text(
+                  'Please select a category',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Category is selected - show articles for that category
+    final filteredArticles = applyGlobalFilters(newsProvider.articles, settings, selectedCategory);
+
+    // Sort articles by date descending
+    filteredArticles.sort((a, b) {
+      final dateA = a.date != null ? DateTime.tryParse(a.date!) ?? DateTime(1970) : DateTime(1970);
+      final dateB = b.date != null ? DateTime.tryParse(b.date!) ?? DateTime(1970) : DateTime(1970);
+      return dateB.compareTo(dateA);
+    });
+
+    final displayedArticles = filteredArticles.take(8).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(selectedCategory == null
-            ? 'Select a Category'
-            : 'Category: $selectedCategory'),
+        title: Text('Category: $selectedCategory'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pushNamed(context, '/'), child: const Text('Home')),
+          TextButton(onPressed: () => Navigator.pushNamed(context, '/category'), child: const Text('Categories')),
+          TextButton(onPressed: () => Navigator.pushNamed(context, '/bookmarks'), child: const Text('Bookmarks')),
+          TextButton(onPressed: () => Navigator.pushNamed(context, '/settings'), child: const Text('Settings')),
+        ],
       ),
       body: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: screenWidth < 600 ? 16.0 : 32.0,
-          vertical: 20.0,
-        ),
-        child: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : errorMessage != null
-            ? Center(child: Text(errorMessage!))
-            : Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: EdgeInsets.symmetric(horizontal: screenWidth < 600 ? 16.0 : 32.0, vertical: 20.0),
+        child: Column(
           children: [
-            // Category Carousel
             CarouselSlider(
-              options: CarouselOptions(
-                height: 50,
-                viewportFraction: 0.4,
-                enlargeCenterPage: true,
-                enableInfiniteScroll: true,
-                autoPlay: true,
-              ),
+              options: CarouselOptions(height: 50, viewportFraction: 0.4, autoPlay: true),
               items: categories.map((category) {
                 final isSelected = category == selectedCategory;
                 return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      if (selectedCategory == category) {
-                        selectedCategory = null;
-                      } else {
-                        selectedCategory = category;
-                      }
-                    });
-                  },
+                  onTap: () => setState(() {
+                    selectedCategory = category;
+                  }),
                   child: Container(
-                    margin:
-                    const EdgeInsets.symmetric(horizontal: 6),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.blueAccent
-                          : Colors.grey[300],
+                      color: isSelected ? Colors.blueAccent : Colors.grey[300],
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Center(
-                      child: Text(
-                        category,
-                        style: TextStyle(
-                          color:
-                          isSelected ? Colors.white : Colors.black87,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: Text(category,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.black87,
+                            fontWeight: FontWeight.w600,
+                          )),
                     ),
                   ),
                 );
               }).toList(),
             ),
-
-            const SizedBox(height: 16),
-
-            // Filter Info Chips
-            Row(
-              children: [
-                if (settings.showShortOnly)
-                  Padding(
-                    padding: const EdgeInsets.only(
-                        right: 8.0, top: 4, bottom: 4),
-                    child: Chip(
-                      label: const Text('Short Only'),
-                      backgroundColor:
-                      Colors.greenAccent.shade100,
-                    ),
-                  ),
-                if (settings.showTrendingOnly)
-                  Padding(
-                    padding: const EdgeInsets.only(
-                        right: 8.0, top: 4, bottom: 4),
-                    child: Chip(
-                      label: const Text('Trending Only'),
-                      backgroundColor:
-                      Colors.orangeAccent.shade100,
-                    ),
-                  ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            if (selectedCategory == null)
+            const SizedBox(height: 24),
+            if (displayedArticles.isEmpty)
               const Expanded(
                 child: Center(
                   child: Text(
-                    'Please select a category from above to see articles.',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w500),
-                    textAlign: TextAlign.center,
+                    'No articles found in this category',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               )
             else
               Expanded(
-                child: filteredArticles.isEmpty
-                    ? const Center(
-                    child: Text(
-                        'No articles match your current filters.'))
-                    : ListView.builder(
-                  itemCount: filteredArticles.length,
+                child: ListView.builder(
+                  itemCount: displayedArticles.length,
                   itemBuilder: (context, index) {
-                    final article = filteredArticles[index];
+                    final article = displayedArticles[index];
                     return ArticleCard(
                       article: article,
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/article',
-                          arguments: article,
-                        );
-                      },
+                      onTap: () => Navigator.pushNamed(context, '/article', arguments: article),
                     );
                   },
                 ),

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:provider/provider.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+
 import '../models/news_article.dart';
 import '../widgets/article_card.dart';
 import '../provider/settings_provider.dart';
-import '../services/news_api.dart';
+import '../provider/news_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -13,29 +14,19 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String? selectedCategory;
-  List<NewsArticle> allArticles = [];
-  bool isLoading = true;
-  bool hasError = false;
 
   @override
   void initState() {
     super.initState();
-    fetchArticles();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final newsProvider = Provider.of<NewsProvider>(context, listen: false);
+      newsProvider.fetchArticles();
+    });
   }
 
-  Future<void> fetchArticles() async {
-    try {
-      final fetchedArticles = await NewsService.fetchAllCategoriesNews();
-      setState(() {
-        allArticles = fetchedArticles;
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        hasError = true;
-        isLoading = false;
-      });
-    }
+  Future<void> _refreshArticles() async {
+    final newsProvider = Provider.of<NewsProvider>(context, listen: false);
+    await newsProvider.fetchArticles();
   }
 
   List<NewsArticle> applyGlobalFilters(List<NewsArticle> articles, SettingsProvider settings) {
@@ -49,13 +40,35 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final settingsProvider = Provider.of<SettingsProvider>(context);
+    final newsProvider = Provider.of<NewsProvider>(context);
     final screenWidth = MediaQuery.of(context).size.width;
 
+    if (newsProvider.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (newsProvider.error != null) {
+      return Scaffold(
+        body: Center(child: Text('Failed to load news: ${newsProvider.error}')),
+      );
+    }
+
+    final allArticles = newsProvider.articles;
     final filteredArticles = applyGlobalFilters(allArticles, settingsProvider);
-    final displayedArticles = selectedCategory == null
-        ? filteredArticles.take(8).toList()
+
+    var filteredByCategory = selectedCategory == null
+        ? filteredArticles
         : filteredArticles.where((a) => a.category == selectedCategory).toList();
 
+    filteredByCategory.sort((a, b) {
+      final dateA = a.date != null ? DateTime.tryParse(a.date!) ?? DateTime(1970) : DateTime(1970);
+      final dateB = b.date != null ? DateTime.tryParse(b.date!) ?? DateTime(1970) : DateTime(1970);
+      return dateB.compareTo(dateA);
+    });
+
+    final displayedArticles = filteredByCategory.take(8).toList();
     final categories = allArticles.map((a) => a.category).toSet().toList();
 
     return Scaffold(
@@ -72,11 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : hasError
-          ? const Center(child: Text("Failed to load news"))
-          : Padding(
+      body: Padding(
         padding: EdgeInsets.symmetric(horizontal: screenWidth < 600 ? 16.0 : 32.0, vertical: 20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,20 +134,27 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              selectedCategory == null ? 'Latest Articles (8)' : 'Articles in "$selectedCategory"',
+              selectedCategory == null
+                  ? 'Latest Articles (8)'
+                  : 'Latest in $selectedCategory (${displayedArticles.length})',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: ListView.builder(
-                itemCount: displayedArticles.length,
-                itemBuilder: (context, index) {
-                  final article = displayedArticles[index];
-                  return ArticleCard(
-                    article: article,
-                    onTap: () => Navigator.pushNamed(context, '/article', arguments: article),
-                  );
-                },
+              child: displayedArticles.isEmpty
+                  ? const Center(child: Text('No articles match your filters'))
+                  : RefreshIndicator(
+                onRefresh: _refreshArticles,
+                child: ListView.builder(
+                  itemCount: displayedArticles.length,
+                  itemBuilder: (context, index) {
+                    final article = displayedArticles[index];
+                    return ArticleCard(
+                      article: article,
+                      onTap: () => Navigator.pushNamed(context, '/article', arguments: article),
+                    );
+                  },
+                ),
               ),
             ),
           ],

@@ -1,4 +1,4 @@
-//bookmark_provider.dart
+// bookmark_provider.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,9 +10,9 @@ class BookmarkProvider with ChangeNotifier {
 
   List<NewsArticle> _allArticles = [];
 
-  void setAvailableArticles(List<NewsArticle> allArticles) {
+  Future<void> setAvailableArticles(List<NewsArticle> allArticles) async {
     _allArticles = allArticles;
-    loadBookmarks(); // Load after all articles are available
+    await loadBookmarks(); // Await loading before notifying
   }
 
   Future<void> toggleBookmark(NewsArticle article) async {

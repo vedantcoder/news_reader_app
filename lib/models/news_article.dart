@@ -1,3 +1,4 @@
+//news_article.dart (model)
 class NewsArticle {
   final String title;
   final String content;
@@ -25,11 +26,11 @@ class NewsArticle {
     if (publishedAt.isEmpty) return false;
     final dateTime = DateTime.tryParse(publishedAt);
     if (dateTime == null) return false;
-    return DateTime.now().toUtc().difference(dateTime.toUtc()).inHours <= 30;
+    return DateTime.now().toUtc().difference(dateTime.toUtc()).inHours <= 12;
   }
 
   static bool isLongArticle(String content) {
-    return content.length > 500;
+    return content.length > 100; //Condition for checking lenght and assigning isLong
   }
 
   factory NewsArticle.fromJson(Map<String, dynamic> json, String category) {
