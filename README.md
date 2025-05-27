@@ -1,12 +1,15 @@
 # News Reader App (as of 25/05/2025)
 
 For anyone who wants to run this project-
+
 Andoid - use NewsReader_FINAL.apk. Install and run the app
+
 Windows - go to build\windows\x64\runner\Release and run the news_reader_app.exe
 
 The app will take some time to startup, please wait.
 
 Features- 
+
 Latest News on Home Page
 
 News divided into various categories in the categories page
